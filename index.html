@@ -4315,33 +4315,42 @@ function saveGameDna() {
 // 2. 再開ボタンを押したときの処理（上書き）
 // ===================================================
 function loadGameDna() {
-    // 画面にある入力欄（id="dnaCodeInput"）から文字を取得します
+    // 4243行目の入力欄（id="dnaCodeInput"）から、プレイヤーが貼り付けた文字列を取得
     const inputElement = document.getElementById("dnaCodeInput");
     if (!inputElement) return;
     
     const jumonInput = inputElement.value.trim();
     if (!jumonInput) {
-        alert("DNAコードを入力してください。");
+        alert("DNAコード（復活の呪文）を入力欄に貼り付けてください。");
         return;
     }
 
     try {
-        // 暗号を解除して元のデータを復元
+        // 暗号（Base64）を解除して、元のゲームデータ（オブジェクト）に復元
         const jsonStr = decodeURIComponent(escape(atob(jumonInput)));
         const loadedData = JSON.parse(jsonStr);
 
-        // ゲームの各変数にデータを反映
+        // 各変数にロードしたデータを流し込む（実態に合わせています）
         if (loadedData.c && typeof extinctIds !== 'undefined') extinctIds = loadedData.c;
         if (loadedData.t && typeof unlockedTitlesByMonster !== 'undefined') unlockedTitlesByMonster = loadedData.t;
         if (loadedData.s !== undefined && typeof starCount !== 'undefined') starCount = loadedData.s;
 
-        // 💡 もし画面の数字（星の数など）を更新する関数（例: updateDisplay() など）が
-        // ゲーム内にある場合は、ここにその関数名を1行書き加えてください。
+        // ===================================================
+        // 💡 画面リフレッシュの処理
+        // ===================================================
+        // ロードしただけでは画面上の「星の数」などの表示が古いままになる場合があるため、
+        // もしゲーム内に「画面を最新に描き直す関数（例：updateDisplay()など）」があれば、
+        // ここにその関数名を1行書き加えてください。
+        // 例: if (typeof updateDisplay === 'function') updateDisplay();
 
         alert("データの復元に成功しました！続きから開始します。");
+        
+        // 入力欄を綺麗に空にする
+        inputElement.value = "";
+        
     } catch(e) {
-        alert("エラー：正しいDNAコードではありません。");
-        console.error(e);
+        alert("エラー：正しいDNAコード（復活の呪文）ではありません。内容を確認してください。");
+        console.error("ロードエラー詳細:", e);
     }
 }
 
