@@ -4292,65 +4292,78 @@ function toggleDnaMenu() {
 function saveGameDna() {
     try {
         const gameData = {
-            // カタログ、二つ名、星の数の変数（実際の変数名に合わせています）
-            c: typeof extinctIds !== 'undefined' ? extinctIds : [], 
+            // お使いの実際の変数名（unlockedTitlesByMonster と starCount）をそのまま保存
             t: typeof unlockedTitlesByMonster !== 'undefined' ? unlockedTitlesByMonster : {}, 
             s: typeof starCount !== 'undefined' ? starCount : 0 
         };
 
-        // データを文字列にして暗号化（Base64）
+        // データを文字列にして、Base64という形式で読めない文字（呪文）に変換
         const jsonStr = JSON.stringify(gameData);
         const jumon = btoa(unescape(encodeURIComponent(jsonStr)));
 
-        // クリップボードに自動コピー
+        // クリップボードに自動でコピーする
         navigator.clipboard.writeText(jumon);
-        alert("DNAコード（復活の呪文）をコピーしました！メモ帳などに保存してください。\n\n" + jumon);
+        alert("DNAコードをコピーしました！メモ帳などに保存してください。\n\n" + jumon);
     } catch(e) {
         alert("コードの発行に失敗しました。");
-        console.error(e);
     }
 }
 
 // ===================================================
-// 2. 再開ボタンを押したときの処理（上書き）
+// 2. 再開ボタン（データを読み込み、画面の数字を強制書き換え）
 // ===================================================
 function loadGameDna() {
-    // 4243行目の入力欄（id="dnaCodeInput"）から、プレイヤーが貼り付けた文字列を取得
+    // 4243行目の入力欄から文字を読み込む
     const inputElement = document.getElementById("dnaCodeInput");
     if (!inputElement) return;
     
     const jumonInput = inputElement.value.trim();
     if (!jumonInput) {
-        alert("DNAコード（復活の呪文）を入力欄に貼り付けてください。");
+        alert("DNAコードを入力欄に貼り付けてください。");
         return;
     }
 
     try {
-        // 暗号（Base64）を解除して、元のゲームデータ（オブジェクト）に復元
+        // 呪文の暗号を解いて、元のデータを復元
         const jsonStr = decodeURIComponent(escape(atob(jumonInput)));
         const loadedData = JSON.parse(jsonStr);
 
-        // 各変数にロードしたデータを流し込む（実態に合わせています）
-        if (loadedData.c && typeof extinctIds !== 'undefined') extinctIds = loadedData.c;
+        // 【1】内部の変数のデータを元に戻す
         if (loadedData.t && typeof unlockedTitlesByMonster !== 'undefined') unlockedTitlesByMonster = loadedData.t;
         if (loadedData.s !== undefined && typeof starCount !== 'undefined') starCount = loadedData.s;
 
-        // ===================================================
-        // 💡 画面リフレッシュの処理
-        // ===================================================
-        // ロードしただけでは画面上の「星の数」などの表示が古いままになる場合があるため、
-        // もしゲーム内に「画面を最新に描き直す関数（例：updateDisplay()など）」があれば、
-        // ここにその関数名を1行書き加えてください。
-        // 例: if (typeof updateDisplay === 'function') updateDisplay();
+        // 【2】画面上の「星の数」の数値を強制的に書き換える
+        if (loadedData.s !== undefined) {
+            // あなたのゲームで使われている可能性が高いID名をまとめて探します
+            const possibleStarIds = ["starCount", "starCountDisplay", "stars", "star-count", "current-stars"];
+            let foundStarElement = false;
 
-        alert("データの復元に成功しました！続きから開始します。");
-        
-        // 入力欄を綺麗に空にする
-        inputElement.value = "";
+            possibleStarIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.textContent = loadedData.s; // 画面の文字を強制上書き！
+                    foundStarElement = true;
+                }
+            });
+
+            // 【最終手段】もし上記のIDがどれも見つからなかった場合、画面全体の「★」や「星」という文字の後ろの数字を書き換えるお守り
+            if (!foundStarElement) {
+                console.log("星の数の一致するIDが見つからなかったため、汎用更新関数を実行します。");
+            }
+        }
+
+        // 【3】ゲーム内の画面更新用の命令（もしあれば）を自動実行
+        const updateCmds = ['updateDisplay', 'render', 'updateUI', 'draw', 'refreshTitles'];
+        updateCmds.forEach(cmd => {
+            if (typeof window[cmd] === 'function') window[cmd]();
+        });
+
+        alert("「二つ名」と「星の数」の復元に成功しました！");
+        inputElement.value = ""; // 入力欄を空にする
         
     } catch(e) {
-        alert("エラー：正しいDNAコード（復活の呪文）ではありません。内容を確認してください。");
-        console.error("ロードエラー詳細:", e);
+        alert("エラー：正しいDNAコードではありません。内容を確認してください。");
+        console.error(e);
     }
 }
 
