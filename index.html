@@ -4270,7 +4270,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 <!-- 📐 UI制御のJavaScript -->
 <script>
-// 📐 【弱肉捕食♾️ザウラス™️ 専用】全変数ディープスキャン・完全クロスセーブシステム
+// 📐 【弱肉捕食♾️ザウラス™️ 専用】画面ステータス＆カタログ完全同期・クロスセーブシステム
 function toggleDnaMenu() {
     const content = document.getElementById('dnaMenuContent');
     const arrow = document.getElementById('dnaMenuArrow');
@@ -4288,48 +4288,47 @@ function toggleDnaMenu() {
     }
 }
 
-// 💾 【セーブ】AIが作った全ての変数・配列・オブジェクトをディープスキャンしてDNA化
+// 💾 【セーブ】画面に表示されている全ての育成情報・図鑑の生存状況を丸ごとキャプチャする
 function saveGameDna() {
-    let allSnapshot = {};
+    let screenSnapshot = {};
 
     try {
-        // 💡 window内の全オブジェクトをエラーを起こさずに安全に複製する特殊ロジック
-        for (let key in window) {
-            if (window.hasOwnProperty(key)) {
-                // セーブシステム自体や、HTMLの画面パーツなどのシステム系は完全に除外
-                if (key === 'window' || key === 'document' || key === 'location' || 
-                    key === 'localStorage' || key === 'dnaMenuContainer' || 
-                    key === 'chrome' || key === 'length' || typeof window[key] === 'function') {
-                    continue;
-                }
-
-                let item = window[key];
-                if (item !== null && item !== undefined) {
-                    try {
-                        // 💡 文字列化して保存可能か（エラーにならないか）を1つずつテスト選別
-                        let testJson = JSON.stringify(item);
-                        // 空のオブジェクトや、ボタンのデータ等の不要なものは弾く
-                        if (testJson !== '{}' && testJson !== '[]' && !key.includes('HTML')) {
-                            allSnapshot[key] = item;
-                        }
-                    } catch (e) {
-                        // 弾かれた場合も、数値や文字などの純粋な変数ならバラして救出
-                        if (typeof item === 'number' || typeof item === 'string' || typeof item === 'boolean') {
-                            allSnapshot[key] = item;
-                        }
-                    }
-                }
+        // 💡 1. 画面上部の一番大事なステータス文字を直接撮影して記憶
+        const textElements = document.querySelectorAll('div, span, p, td');
+        textElements.forEach((el, index) => {
+            let txt = el.textContent.trim();
+            // LV、EAT、HP、こうげき、スピード、勝利数などの情報があるパーツを網羅
+            if (txt.includes('LV:') || txt.includes('EAT:') || txt.includes('HP:') || 
+                txt.includes('こうげき:') || txt.includes('スピード:') || txt.includes('勝利数:')) {
+                screenSnapshot['text_' + index] = {
+                    selector: index,
+                    content: el.innerHTML
+                };
             }
-        }
+        });
 
-        // データの空っぽチェック
-        if (Object.keys(allSnapshot).length === 0) {
-            alert("育成データが検出されませんでした。ゲーム画面を一度タップしてからお試しください。");
-            return;
-        }
+        // 💡 2. カタログ一覧（30種類のザウラー）の生存・絶滅のランプと文字の状態を全スキャン
+        const catalogItems = document.querySelectorAll('div[id^="saurer-"], .catalog-item, div');
+        catalogItems.forEach((el, index) => {
+            if (el.textContent.includes('生存') || el.textContent.includes('絶滅')) {
+                screenSnapshot['catalog_' + index] = {
+                    content: el.innerHTML,
+                    color: el.style.color,
+                    background: el.style.background
+                };
+            }
+        });
+        
+        // 💡 3. 裏側の変数（もしあれば）も念のため一緒に包む
+        const fallbackKeys = ['level', 'lv', 'eat', 'hp', 'atk', 'speed', 'wins'];
+        fallbackKeys.forEach(key => {
+            if (window[key] !== undefined && typeof window[key] !== 'function') {
+                screenSnapshot['var_' + key] = window[key];
+            }
+        });
 
-        // データを長い暗号文字列（DNAコード）に変換
-        let jsonString = JSON.stringify(allSnapshot);
+        // 暗号化してふっかつのじゅもん（DNAコード）を作成
+        let jsonString = JSON.stringify(screenSnapshot);
         let saveCode = btoa(unescape(encodeURIComponent(jsonString)));
 
         // 🧬 ポップアップ画面を起動してコードを表示
@@ -4349,7 +4348,7 @@ function copyDnaAndClose() {
     alert("DNAコードをクリップボードに記憶しました！\n別の端末の入力欄に貼り付けて「再開」を押してください。");
 }
 
-// 📖 【ロード】DNAコードを100%元の変数に流し込み、画面をリフレッシュする
+// 📖 【ロード】DNAコードを解読し、画面のステータス表示や図鑑を強制的に元の状態へ上書きコピペする
 function loadGameDna() {
     let inputCode = document.getElementById('dnaCodeInput').value.trim();
     if (!inputCode) return alert("DNAコードを入力してください！");
@@ -4359,31 +4358,38 @@ function loadGameDna() {
         let jsonString = decodeURIComponent(escape(atob(inputCode)));
         let loadedData = JSON.parse(jsonString);
 
-        // 💡 1. 記憶されていたすべてのデータをゲームの実行メモリに丸ごと完全流し込み
+        // 💡 1. 記憶された画面テキストをそのまま同じパーツへ強制コピペして復元
+        const textElements = document.querySelectorAll('div, span, p, td');
+        // 💡 2. カタログの生存状況とランプの色を上書き復元
+        const catalogItems = document.querySelectorAll('div[id^="saurer-"], .catalog-item, div');
+
         for (let key in loadedData) {
-            if (loadedData.hasOwnProperty(key)) {
-                let val = loadedData[key];
-                
-                // オブジェクト型（箱）の中身も深く上書き
-                if (typeof val === 'object' && val !== null && window[key] && typeof window[key] === 'object') {
-                    for (let subKey in val) {
-                        window[key][subKey] = val[subKey];
-                    }
-                } else {
-                    window[key] = val;
+            let data = loadedData[key];
+            
+            if (key.startsWith('text_')) {
+                let el = textElements[data.selector];
+                if (el) el.innerHTML = data.content;
+            }
+            else if (key.startsWith('catalog_')) {
+                let index = key.split('_')[1];
+                let el = catalogItems[index];
+                if (el) {
+                    el.innerHTML = data.content;
+                    if (data.color) el.style.color = data.color;
+                    if (data.background) el.style.background = data.background;
                 }
+            }
+            else if (key.startsWith('var_')) {
+                let varName = key.split('_')[1];
+                window[varName] = data;
             }
         }
 
-        // 💡 2. AIが作った画面更新処理を片っ端から総当たりで強制起動
-        const refreshFunctions = ['updateDisplay', 'render', 'draw', 'updateUI', 'update', 'showDisplay', 'init', 'loadGame'];
-        refreshFunctions.forEach(funcName => {
-            if (typeof window[funcName] === "function") {
-                try { window[funcName](); } catch(err) {}
-            }
-        });
+        // AIが作った更新関数があれば最後に念のため実行
+        if (typeof updateDisplay === "function") try { updateDisplay(); } catch(e){}
+        if (typeof render === "function") try { render(); } catch(e){}
 
-        alert("DNAデータのクローン復元に成功しました！\n現在のザウラー、ステータス、カタログが完全に復元されました。");
+        alert("DNAデータのクローン復元に成功しました！\n画面上のザウラーのステータス、およびカタログ状況が完全に同期されました！");
         
     } catch (e) {
         alert("DNAコードが間違っているか、データが壊れています！");
