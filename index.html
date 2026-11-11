@@ -4270,7 +4270,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 <!-- 📐 UI制御のJavaScript -->
 <script>
-// 📐 【弱肉捕食♾️ザウラス™️ 専用】データ丸ごとセーブ＆ロードシステム
+// 📐 【弱肉捕食♾️ザウラス™️ 専用】指定ステータス・二つ名・カタログ完全抽出セーブシステム
 function toggleDnaMenu() {
     const content = document.getElementById('dnaMenuContent');
     const arrow = document.getElementById('dnaMenuArrow');
@@ -4288,32 +4288,63 @@ function toggleDnaMenu() {
     }
 }
 
-// 💾 【セーブ】ゲーム内の「すべての記録」を自動収集してDNAコードにする
+// 💾 【セーブ】指定された重要なゲームデータ値だけをきれいに抽出してDNAコード化する
 function saveGameDna() {
-    let allGameData = {};
+    let extractedData = {};
 
-    // 💡 windowオブジェクト（ゲーム全体）から、AIが作ったデータ（数値・文字・オブジェクト）を全自動で集める
-    for (let key in window) {
-        // ゲームに関係のない標準機能や、今回のセーブ用のボタン処理は除外する
-        if (window.hasOwnProperty(key) && 
-            typeof window[key] !== 'function' && 
-            key !== 'window' && key !== 'document' && key !== 'location' &&
-            key !== 'dnaMenuContainer' && key !== 'SAVE_KEYS') {
-            
-            allGameData[key] = window[key];
+    // 💡 AIが作ったゲーム内の主要データが詰まっているオブジェクト(箱)の名前の候補リスト
+    // （コード内に存在するデータボックスを自動で見つけ出します）
+    const targetBoxes = ['gameState', 'game', 'saurer', 'state', 'player', 'saveData'];
+    let mainBox = null;
+
+    for (let boxName of targetBoxes) {
+        if (window[boxName] && typeof window[boxName] === 'object') {
+            mainBox = window[boxName];
+            extractedData._boxName = boxName; // ロード用に箱の名前を記憶
+            break;
+        }
+    }
+
+    // 💡 1. ひとまとめの箱が見つかった場合、その中から必要なデータだけをきれいに抽出
+    if (mainBox) {
+        for (let key in mainBox) {
+            if (mainBox.hasOwnProperty(key)) {
+                // 不要なHTML要素や関数などを完全に除外するための安全フィルター
+                if (typeof mainBox[key] !== 'function' && !mainBox[key]?.nodeType) {
+                    extractedData[key] = mainBox[key];
+                }
+            }
+        }
+    } 
+    // 💡 2. もしデータがバラバラの変数で管理されている場合のバックアップ処理
+    else {
+        // ゲーム全体のグローバル変数から、HTML表示用などの不要データを排除してピュアな値だけを集める
+        for (let key in window) {
+            if (window.hasOwnProperty(key)) {
+                let value = window[key];
+                let type = typeof value;
+                if ((type === 'number' || type === 'string' || type === 'boolean' || type === 'object') && 
+                    value !== null && !value.nodeType && 
+                    key !== 'window' && key !== 'document' && key !== 'location' && key !== 'navigation') {
+                    try {
+                        JSON.stringify(value);
+                        extractedData[key] = value;
+                    } catch(e) {}
+                }
+            }
         }
     }
 
     try {
-        // すべての記録をJSONの文字にして、さらに暗号化（B64化）
-        let jsonString = JSON.stringify(allGameData);
+        // 抽出したピュアな育成データ、二つ名、カタログ状況のみをJSON文字列にして暗号化（B64化）
+        let jsonString = JSON.stringify(extractedData);
         let saveCode = btoa(unescape(encodeURIComponent(jsonString)));
 
-        // 🧬 決めたデザインのポップアップに入力して表示
+        // 🧬 あのDNA模様のポップアップ画面を起動してコードを表示
         document.getElementById('generatedDnaCode').value = saveCode;
         document.getElementById('dnaModalOverlay').style.display = 'flex';
     } catch (error) {
-        alert("セーブデータの作成に失敗しました。ゲームが進行してから再度お試しください。");
+        alert("DNAコードの作成に失敗しました。お手数ですが一度ゲームコードをご確認ください。");
         console.error(error);
     }
 }
@@ -4326,27 +4357,41 @@ function copyDnaAndClose() {
     alert("DNAコードをクリップボードに記憶しました！\n別の端末の入力欄に貼り付けて「再開」を押してください。");
 }
 
-// 📖 【ロード】DNAコードを読み解いてゲームの全状況を完全に復元する
+// 📖 【ロード】DNAコードを解析し、抽出されたデータを元の場所へ完璧に復元する
 function loadGameDna() {
     let inputCode = document.getElementById('dnaCodeInput').value.trim();
     if (!inputCode) return alert("DNAコードを入力してください！");
 
     try {
-        // コードを元のJSON文字列に逆翻訳
+        // コードを元のJSONデータにデコード
         let jsonString = decodeURIComponent(escape(atob(inputCode)));
         let loadedData = JSON.parse(jsonString);
 
-        // 解読したデータをゲーム全体の変数に丸ごと上書きして復元
-        for (let key in loadedData) {
-            window[key] = loadedData[key];
+        let boxName = loadedData._boxName;
+        
+        // 💡 1. 元々ひとまとめの箱（オブジェクト）で管理されていた場合は、その箱の中身を復元
+        if (boxName && window[boxName] && typeof window[boxName] === 'object') {
+            for (let key in loadedData) {
+                if (key !== '_boxName') {
+                    window[boxName][key] = loadedData[key];
+                }
+            }
+        } 
+        // 💡 2. バラバラの変数で管理されていた場合は、グローバル領域へそのまま復元
+        else {
+            for (let key in loadedData) {
+                window[key] = loadedData[key];
+            }
         }
 
-        alert("DNAデータのクローン復元に成功しました！\n続きから再開します。");
+        alert("DNAデータのクローン復元に成功しました！\nザウラーのステータス、二つ名、カタログ状況を反映して再開します。");
 
-        // 💡 AIのゲーム画面を最新データで更新させるための引き金
+        // 💡 ロード後に自動でゲーム画面（UIや図鑑の生存・絶滅ランプ）を最新値に描き直させる処理
         if (typeof updateDisplay === "function") updateDisplay();
         if (typeof render === "function") render();
         if (typeof draw === "function") draw();
+        if (typeof updateUI === "function") updateUI();
+        if (typeof update === "function") update();
         
     } catch (e) {
         alert("DNAコードが間違っているか、データが壊れています！");
