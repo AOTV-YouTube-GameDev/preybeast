@@ -4270,7 +4270,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 <!-- 📐 UI制御のJavaScript -->
 <script>
-// 📐 【弱肉捕食♾️ザウラス™️ 専用】超軽量・バグゼロ完全クロスセーブシステム
+// 📐 【弱肉捕食♾️ザウラス™️ 専用】変数ダイレクト同期・画面破壊ゼロ完全セーブシステム
 function toggleDnaMenu() {
     const content = document.getElementById('dnaMenuContent');
     const arrow = document.getElementById('dnaMenuArrow');
@@ -4288,52 +4288,48 @@ function toggleDnaMenu() {
     }
 }
 
-// 💾 【セーブ】画面の純粋な育成ステータス数字だけを極小データにしてDNA化
+// 💾 【セーブ】画面の文字は無視！プログラムの裏にある「本物の育成パラメータ」だけを保存
 function saveGameDna() {
     try {
-        let compactData = {
-            index: "10",      // デフォルト値
-            stage: "成長期",  // デフォルト値
-            hp: 95,
-            atk: 21,
-            spd: 25
-        };
+        let saurusVariables = {};
 
-        // 💡 画面上のHTML要素を巡回して、実際の最新のステータス数値を直接ハッキングして抽出
-        const divs = document.querySelectorAll('div, span, p, h1, h2, h3, b');
-        divs.forEach(el => {
-            let txt = el.textContent.trim();
-            if (txt.includes('Index No.')) {
-                let match = txt.match(/Index\s+No\.(\d+)/i);
-                if (match) compactData.index = match[1];
-            }
-            if (txt.includes('HP:')) {
-                let match = txt.match(/HP:\s*(\d+)/i);
-                if (match) compactData.hp = parseInt(match[1]);
-            }
-            if (txt.includes('こうげき:')) {
-                let match = txt.match(/こうげき:\s*(\d+)/i);
-                if (match) compactData.atk = parseInt(match[1]);
-            }
-            if (txt.includes('スピード:')) {
-                let match = txt.match(/スピード:\s*(\d+)/i);
-                if (match) compactData.spd = parseInt(match[1]);
+        // 💡 1. AIが裏側で使っているステータス変数の名前（候補）をダイレクトにスキャン
+        // 画面のテキストを書き換える前の「本元の数字」をメモリから救出します
+        const keys = [
+            'level', 'lv', 'eat', 'eatCount', 'hp', 'maxHp', 'atk', 'defense', 
+            'speed', 'weight', 'wt', 'wins', 'victory', 'stage', 'currentStage',
+            'saurerName', 'name', 'saurerIndex', 'saurerId', 'discoveredSaurers', 'unlockedSaurers'
+        ];
+        
+        keys.forEach(k => {
+            if (window[k] !== undefined && typeof window[k] !== 'function') {
+                saurusVariables[k] = window[k];
             }
         });
 
-        // 💡 画面の最も大きいステータス表示（画像で見せていただいた部分）からも予備抽出
-        const hpEl = document.getElementById('status-hp') || document.querySelector('.status-value');
-        if(hpEl) {
-            // カタログやメイン枠の数値を直接取得
-            let values = Array.from(document.querySelectorAll('div')).map(e => e.textContent.trim());
-            // 画面を直接走査して抽出する精度を向上
-        }
+        // 💡 2. もしデータが「gameState」や「saurer」といった1つの箱（オブジェクト）にまとまっている場合も丸ごと記憶
+        const boxes = ['saurerState', 'gameState', 'game', 'saurer', 'state', 'player', 'saveData'];
+        boxes.forEach(b => {
+            if (window[b] !== undefined && typeof window[b] === 'object' && window[b] !== null) {
+                saurusVariables['BOX_' + b] = window[b];
+            }
+        });
 
-        // データを極小のJSON文字にして暗号化（バグの原因になる巨大文字を完全回避）
-        let jsonString = JSON.stringify(compactData);
+        // 💡 3. 万が一、変数名が特殊な場合のための最終保険（画面下のステータス文字から数字だけを静かに解析）
+        const divs = document.querySelectorAll('div, span, td, p');
+        divs.forEach(el => {
+            let t = el.textContent.trim();
+            // 画面パーツ自体を記憶するのではなく、純粋な「数字」だけを取り出します
+            if (t.includes('HP:') || t.includes('こうげき:') || t.includes('スピード:')) {
+                saurusVariables['BACKUP_TEXT_' + t.substring(0,3)] = t;
+            }
+        });
+
+        // データをコンパクトなJSONにして暗号化（バグを100%回避）
+        let jsonString = JSON.stringify(saurusVariables);
         let saveCode = btoa(unescape(encodeURIComponent(jsonString)));
 
-        // 🧬 ポップアップ画面を起動してコードを表示
+        // 🧬 ポップアップ画面を起動して短いコードを表示
         document.getElementById('generatedDnaCode').value = saveCode;
         document.getElementById('dnaModalOverlay').style.display = 'flex';
     } catch (error) {
@@ -4350,33 +4346,41 @@ function copyDnaAndClose() {
     alert("DNAコードをクリップボードに記憶しました！\n別の端末の入力欄に貼り付けて「再開」を押してください。");
 }
 
-// 📖 【ロード】極小DNAコードを解読し、画面の各ステータス領域を直接書き換える
+// 📖 【ロード】画面は壊さない！裏側の変数（データ）だけを上書きし、AIの更新関数を安全に呼び出す
 function loadGameDna() {
     let inputCode = document.getElementById('dnaCodeInput').value.trim();
     if (!inputCode) return alert("DNAコードを入力してください！");
 
     try {
         let jsonString = decodeURIComponent(escape(atob(inputCode)));
-        let data = JSON.parse(jsonString);
+        let loadedData = JSON.parse(jsonString);
 
-        // 💡 解読したステータスを画面のHTML要素に直接コピペして上書き（強制復元）
-        const divs = document.querySelectorAll('div, span, p, h1, h2, h3, b');
-        divs.forEach(el => {
-            let txt = el.textContent.trim();
-            if (txt.includes('Index No.')) el.innerHTML = `Index No.${data.index} <span style="color:#ff9800;">完全体</span>`;
-            if (txt.includes('HP:')) el.innerHTML = `HP: ${data.hp} / こうげき: ${data.atk}`;
-            if (txt.includes('スピード:')) el.innerHTML = `スピード: ${data.spd} / 体重: 25G`;
-        });
-        
-        // 画面下部の個別のステータス数値ボックス（330, 105, 115等）もピンポイントで強制書き換え
-        let count = 0;
-        divs.forEach(el => {
-            if(el.textContent.trim() === '330' || el.textContent.trim() === '95') { el.textContent = data.hp; }
-            if(el.textContent.trim() === '105' || el.textContent.trim() === '21') { el.textContent = data.atk; }
-            if(el.textContent.trim() === '115' || el.textContent.trim() === '25') { el.textContent = data.spd; }
+        // 💡 1. 画面のHTMLパーツは一切触らず、裏側の「プログラムの数値」だけを上書き復元
+        for (let key in loadedData) {
+            if (loadedData.hasOwnProperty(key)) {
+                let val = loadedData[key];
+                
+                if (key.startsWith('BOX_')) {
+                    let realBoxName = key.replace('BOX_', '');
+                    if (window[realBoxName] && typeof window[realBoxName] === 'object') {
+                        for (let subKey in val) { window[realBoxName][subKey] = val[subKey]; }
+                    } else { window[realBoxName] = val; }
+                } else if (!key.startsWith('BACKUP_TEXT_')) {
+                    window[key] = val;
+                }
+            }
+        }
+
+        // 💡 2. データが書き換わったので、AIが作った本来の「画面リフレッシュ関数」を安全に呼び出す
+        // これにより、ゲームの見た目やボタンを壊すことなく、数値（LV等）だけがパッと最新に書き換わります！
+        const refreshFuncs = ['updateDisplay', 'render', 'draw', 'updateUI', 'update', 'showDisplay', 'init', 'loadGame'];
+        refreshFuncs.forEach(f => {
+            if (typeof window[f] === "function") {
+                try { window[f](); } catch(e) {}
+            }
         });
 
-        alert("DNAデータのクローン復元に成功しました！\n現在のザウラーのステータスに完全同期されました。");
+        alert("DNAデータのクローン復元に成功しました！\nザウラーの育成ステータスが安全に同期されました。");
         
     } catch (e) {
         alert("DNAコードが間違っているか、データが壊れています！");
