@@ -4270,6 +4270,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 <!-- 📐 UI制御のJavaScript -->
 <script>
+// 📐 【弱肉捕食♾️ザウラス™️ 専用】データ丸ごとセーブ＆ロードシステム
 function toggleDnaMenu() {
     const content = document.getElementById('dnaMenuContent');
     const arrow = document.getElementById('dnaMenuArrow');
@@ -4287,27 +4288,72 @@ function toggleDnaMenu() {
     }
 }
 
-// ボタンを押した時の仮のセーブ処理（※本当の連動処理はコード合体時に実装します）
+// 💾 【セーブ】ゲーム内の「すべての記録」を自動収集してDNAコードにする
 function saveGameDna() {
-    // 仮の暗号データ
-    let dummyDna = "ZAURAS-DNA-" + btoa(encodeURIComponent("SaurerNo10_Lv1_Eat0"));
-    
-    document.getElementById('generatedDnaCode').value = dummyDna;
-    document.getElementById('dnaModalOverlay').style.display = 'flex';
+    let allGameData = {};
+
+    // 💡 windowオブジェクト（ゲーム全体）から、AIが作ったデータ（数値・文字・オブジェクト）を全自動で集める
+    for (let key in window) {
+        // ゲームに関係のない標準機能や、今回のセーブ用のボタン処理は除外する
+        if (window.hasOwnProperty(key) && 
+            typeof window[key] !== 'function' && 
+            key !== 'window' && key !== 'document' && key !== 'location' &&
+            key !== 'dnaMenuContainer' && key !== 'SAVE_KEYS') {
+            
+            allGameData[key] = window[key];
+        }
+    }
+
+    try {
+        // すべての記録をJSONの文字にして、さらに暗号化（B64化）
+        let jsonString = JSON.stringify(allGameData);
+        let saveCode = btoa(unescape(encodeURIComponent(jsonString)));
+
+        // 🧬 決めたデザインのポップアップに入力して表示
+        document.getElementById('generatedDnaCode').value = saveCode;
+        document.getElementById('dnaModalOverlay').style.display = 'flex';
+    } catch (error) {
+        alert("セーブデータの作成に失敗しました。ゲームが進行してから再度お試しください。");
+        console.error(error);
+    }
 }
 
+// 📋 コピーして閉じる処理
 function copyDnaAndClose() {
     const codeText = document.getElementById('generatedDnaCode');
     navigator.clipboard.writeText(codeText.value);
     document.getElementById('dnaModalOverlay').style.display = 'none';
-    alert("DNAコードを記憶しました！別の端末の入力欄に貼り付けて使用してください。");
+    alert("DNAコードをクリップボードに記憶しました！\n別の端末の入力欄に貼り付けて「再開」を押してください。");
 }
 
+// 📖 【ロード】DNAコードを読み解いてゲームの全状況を完全に復元する
 function loadGameDna() {
-    let input = document.getElementById('dnaCodeInput').value.trim();
-    if(!input) return alert("DNAコードが入力されていません！");
-    alert("DNAデータを解析中... 冒険を再開します！");
+    let inputCode = document.getElementById('dnaCodeInput').value.trim();
+    if (!inputCode) return alert("DNAコードを入力してください！");
+
+    try {
+        // コードを元のJSON文字列に逆翻訳
+        let jsonString = decodeURIComponent(escape(atob(inputCode)));
+        let loadedData = JSON.parse(jsonString);
+
+        // 解読したデータをゲーム全体の変数に丸ごと上書きして復元
+        for (let key in loadedData) {
+            window[key] = loadedData[key];
+        }
+
+        alert("DNAデータのクローン復元に成功しました！\n続きから再開します。");
+
+        // 💡 AIのゲーム画面を最新データで更新させるための引き金
+        if (typeof updateDisplay === "function") updateDisplay();
+        if (typeof render === "function") render();
+        if (typeof draw === "function") draw();
+        
+    } catch (e) {
+        alert("DNAコードが間違っているか、データが壊れています！");
+        console.error(e);
+    }
 }
+
 </script>
 
 	</body></html>
