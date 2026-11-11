@@ -4291,99 +4291,56 @@ function toggleDnaMenu() {
 // 💾 【セーブ】画面の文字は無視！プログラムの裏にある「本物の育成パラメータ」だけを保存
 function saveGameDna() {
     try {
-        let saurusVariables = {};
+        const gameData = {
+            // カタログ、二つ名、星の数の変数（実際の変数名に合わせています）
+            c: typeof extinctIds !== 'undefined' ? extinctIds : [], 
+            t: typeof unlockedTitlesByMonster !== 'undefined' ? unlockedTitlesByMonster : {}, 
+            s: typeof starCount !== 'undefined' ? starCount : 0 
+        };
 
-        // 💡 1. AIが裏側で使っているステータス変数の名前（候補）をダイレクトにスキャン
-        // 画面のテキストを書き換える前の「本元の数字」をメモリから救出します
-        const keys = [
-            'level', 'lv', 'eat', 'eatCount', 'hp', 'maxHp', 'atk', 'defense', 
-            'speed', 'weight', 'wt', 'wins', 'victory', 'stage', 'currentStage',
-            'saurerName', 'name', 'saurerIndex', 'saurerId', 'discoveredSaurers', 'unlockedSaurers'
-        ];
-        
-        keys.forEach(k => {
-            if (window[k] !== undefined && typeof window[k] !== 'function') {
-                saurusVariables[k] = window[k];
-            }
-        });
+        // データを文字列にして暗号化（Base64）
+        const jsonStr = JSON.stringify(gameData);
+        const jumon = btoa(unescape(encodeURIComponent(jsonStr)));
 
-        // 💡 2. もしデータが「gameState」や「saurer」といった1つの箱（オブジェクト）にまとまっている場合も丸ごと記憶
-        const boxes = ['saurerState', 'gameState', 'game', 'saurer', 'state', 'player', 'saveData'];
-        boxes.forEach(b => {
-            if (window[b] !== undefined && typeof window[b] === 'object' && window[b] !== null) {
-                saurusVariables['BOX_' + b] = window[b];
-            }
-        });
-
-        // 💡 3. 万が一、変数名が特殊な場合のための最終保険（画面下のステータス文字から数字だけを静かに解析）
-        const divs = document.querySelectorAll('div, span, td, p');
-        divs.forEach(el => {
-            let t = el.textContent.trim();
-            // 画面パーツ自体を記憶するのではなく、純粋な「数字」だけを取り出します
-            if (t.includes('HP:') || t.includes('こうげき:') || t.includes('スピード:')) {
-                saurusVariables['BACKUP_TEXT_' + t.substring(0,3)] = t;
-            }
-        });
-
-        // データをコンパクトなJSONにして暗号化（バグを100%回避）
-        let jsonString = JSON.stringify(saurusVariables);
-        let saveCode = btoa(unescape(encodeURIComponent(jsonString)));
-
-        // 🧬 ポップアップ画面を起動して短いコードを表示
-        document.getElementById('generatedDnaCode').value = saveCode;
-        document.getElementById('dnaModalOverlay').style.display = 'flex';
-    } catch (error) {
-        alert("DNAコードの作成に失敗しました。");
-        console.error(error);
+        // クリップボードに自動コピー
+        navigator.clipboard.writeText(jumon);
+        alert("DNAコード（復活の呪文）をコピーしました！メモ帳などに保存してください。\n\n" + jumon);
+    } catch(e) {
+        alert("コードの発行に失敗しました。");
+        console.error(e);
     }
 }
 
-// 📋 コピーして閉じる処理
-function copyDnaAndClose() {
-    const codeText = document.getElementById('generatedDnaCode');
-    navigator.clipboard.writeText(codeText.value);
-    document.getElementById('dnaModalOverlay').style.display = 'none';
-    alert("DNAコードをクリップボードに記憶しました！\n別の端末の入力欄に貼り付けて「再開」を押してください。");
-}
-
-// 📖 【ロード】画面は壊さない！裏側の変数（データ）だけを上書きし、AIの更新関数を安全に呼び出す
+// ===================================================
+// 2. 再開ボタンを押したときの処理（上書き）
+// ===================================================
 function loadGameDna() {
-    let inputCode = document.getElementById('dnaCodeInput').value.trim();
-    if (!inputCode) return alert("DNAコードを入力してください！");
+    // 画面にある入力欄（id="dnaCodeInput"）から文字を取得します
+    const inputElement = document.getElementById("dnaCodeInput");
+    if (!inputElement) return;
+    
+    const jumonInput = inputElement.value.trim();
+    if (!jumonInput) {
+        alert("DNAコードを入力してください。");
+        return;
+    }
 
     try {
-        let jsonString = decodeURIComponent(escape(atob(inputCode)));
-        let loadedData = JSON.parse(jsonString);
+        // 暗号を解除して元のデータを復元
+        const jsonStr = decodeURIComponent(escape(atob(jumonInput)));
+        const loadedData = JSON.parse(jsonStr);
 
-        // 💡 1. 画面のHTMLパーツは一切触らず、裏側の「プログラムの数値」だけを上書き復元
-        for (let key in loadedData) {
-            if (loadedData.hasOwnProperty(key)) {
-                let val = loadedData[key];
-                
-                if (key.startsWith('BOX_')) {
-                    let realBoxName = key.replace('BOX_', '');
-                    if (window[realBoxName] && typeof window[realBoxName] === 'object') {
-                        for (let subKey in val) { window[realBoxName][subKey] = val[subKey]; }
-                    } else { window[realBoxName] = val; }
-                } else if (!key.startsWith('BACKUP_TEXT_')) {
-                    window[key] = val;
-                }
-            }
-        }
+        // ゲームの各変数にデータを反映
+        if (loadedData.c && typeof extinctIds !== 'undefined') extinctIds = loadedData.c;
+        if (loadedData.t && typeof unlockedTitlesByMonster !== 'undefined') unlockedTitlesByMonster = loadedData.t;
+        if (loadedData.s !== undefined && typeof starCount !== 'undefined') starCount = loadedData.s;
 
-        // 💡 2. データが書き換わったので、AIが作った本来の「画面リフレッシュ関数」を安全に呼び出す
-        // これにより、ゲームの見た目やボタンを壊すことなく、数値（LV等）だけがパッと最新に書き換わります！
-        const refreshFuncs = ['updateDisplay', 'render', 'draw', 'updateUI', 'update', 'showDisplay', 'init', 'loadGame'];
-        refreshFuncs.forEach(f => {
-            if (typeof window[f] === "function") {
-                try { window[f](); } catch(e) {}
-            }
-        });
+        // 💡 もし画面の数字（星の数など）を更新する関数（例: updateDisplay() など）が
+        // ゲーム内にある場合は、ここにその関数名を1行書き加えてください。
 
-        alert("DNAデータのクローン復元に成功しました！\nザウラーの育成ステータスが安全に同期されました。");
-        
-    } catch (e) {
-        alert("DNAコードが間違っているか、データが壊れています！");
+        alert("データの復元に成功しました！続きから開始します。");
+    } catch(e) {
+        alert("エラー：正しいDNAコードではありません。");
         console.error(e);
     }
 }
