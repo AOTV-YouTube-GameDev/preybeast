@@ -4221,5 +4221,93 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     z-index: 9999;        /* ゲーム画面の最前面に重ねる */
 }
 </style>
+<!-- 🧬 【弱肉捕食♾️ザウラス™️ 専用】DNAコードメニュー（三アイコン廃止・ステルス風） -->
+<div id="dnaMenuContainer" style="position: fixed; top: 10px; left: 15px; z-index: 9999; 
+            background: rgba(20, 24, 30, 0.4); backdrop-filter: blur(4px); padding: 6px 12px; 
+            border: 1px solid rgba(0, 255, 200, 0.2); border-radius: 4px; 
+            font-family: 'Courier New', monospace; min-width: 120px; transition: all 0.3s; box-sizing: border-box;">
+    
+    <!-- タップして展開するステルス文字（三は廃止） -->
+    <div onclick="toggleDnaMenu()" style="cursor: pointer; font-size: 11px; font-weight: bold; color: rgba(0, 255, 200, 0.8); display: flex; justify-content: space-between; align-items: center; letter-spacing: 1px; user-select: none;">
+        <span>🧬 DNAコード</span>
+        <span id="dnaMenuArrow" style="font-size: 9px; margin-left: 6px;">▼</span>
+    </div>
+    
+    <!-- 格納されるメニュー中身 -->
+    <div id="dnaMenuContent" style="display: none; margin-top: 8px; border-top: 1px solid rgba(0, 255, 200, 0.1); padding-top: 6px;">
+        <button onclick="saveGameDna()" style="width: 100%; padding: 5px; background: rgba(0, 255, 200, 0.15); color: #00ffc8; border: 1px solid #00ffc8; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold; margin-bottom: 6px; transition: 0.2s;" onmouseover="this.style.background='rgba(0, 255, 200, 0.3)'" onmouseout="this.style.background='rgba(0, 255, 200, 0.15)'">
+            コードを発行
+        </button>
+        
+        <div style="display: flex; gap: 4px;">
+            <input type="text" id="dnaCodeInput" placeholder="DNAを入力" style="width: 65%; padding: 3px; background: rgba(0,0,0,0.6); border: 1px solid rgba(0, 255, 200, 0.3); border-radius: 3px; color: #fff; font-size: 10px; box-sizing: border-box;">
+            <button onclick="loadGameDna()" style="width: 35%; padding: 3px; background: rgba(33, 150, 243, 0.2); color: #2196F3; border: 1px solid #2196F3; border-radius: 3px; cursor: pointer; font-size: 10px; font-weight: bold; transition: 0.2s; box-sizing: border-box;" onmouseover="this.style.background='rgba(33, 150, 243, 0.4)'" onmouseout="this.style.background='rgba(33, 150, 243, 0.2)'">
+                再開
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 🌀 DNA模様が光る近未来ポップアップ（初期状態は非表示） -->
+<div id="dnaModalOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 10, 15, 0.85); backdrop-filter: blur(8px); z-index: 10000; align-items: center; justify-content: center;">
+    <div style="background: linear-gradient(135deg, #0d1520 0%, #050a10 100%); border: 2px solid #00ffc8; box-shadow: 0 0 25px rgba(0, 255, 200, 0.4); width: 85%; max-width: 380px; padding: 25px; border-radius: 12px; text-align: center; font-family: sans-serif; position: relative; overflow: hidden; box-sizing: border-box;">
+        
+        <!-- 背景のうっすら光る二重らせんDNAデコレーション -->
+        <div style="position: absolute; top: -20px; right: -20px; opacity: 0.08; font-size: 150px; color: #00ffc8; pointer-events: none; transform: rotate(15deg);">🧬</div>
+        
+        <h3 style="color: #00ffc8; margin-top: 0; margin-bottom: 12px; letter-spacing: 2px; text-shadow: 0 0 8px rgba(0,255,200,0.5); font-size: 16px;">🧬 GENETIC SAVE DATA</h3>
+        <p style="color: #a0aec0; font-size: 11px; margin-bottom: 15px; line-height: 1.4;">固有のDNAコードが生成されました。<br>他端末で入力するとこの状態から復元（再開）できます。</p>
+        
+        <!-- 暗号化されたコードの表示エリア -->
+        <textarea id="generatedDnaCode" readonly style="width: 100%; height: 75px; background: rgba(0,0,0,0.7); border: 1px solid rgba(0, 255, 200, 0.3); border-radius: 6px; color: #39ff14; font-family: monospace; font-size: 11px; padding: 10px; box-sizing: border-box; resize: none; text-align: center; margin-bottom: 15px; box-shadow: inset 0 0 10px rgba(0,255,0,0.2);"></textarea>
+        
+        <!-- コピー＆閉じるボタン -->
+        <button onclick="copyDnaAndClose()" style="width: 100%; padding: 12px; background: linear-gradient(90deg, #00ffc8, #00bfff); color: #050a10; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(0, 255, 200, 0.3); transition: 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+            コードを記憶して閉じる (Copy & Close)
+        </button>
+    </div>
+</div>
+
+<!-- 📐 UI制御のJavaScript -->
+<script>
+function toggleDnaMenu() {
+    const content = document.getElementById('dnaMenuContent');
+    const arrow = document.getElementById('dnaMenuArrow');
+    const container = document.getElementById('dnaMenuContainer');
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        arrow.textContent = '▲';
+        container.style.background = 'rgba(20, 24, 30, 0.95)';
+        container.style.border = '1px solid rgba(0, 255, 200, 0.6)';
+    } else {
+        content.style.display = 'none';
+        arrow.textContent = '▼';
+        container.style.background = 'rgba(20, 24, 30, 0.4)';
+        container.style.border = '1px solid rgba(0, 255, 200, 0.2)';
+    }
+}
+
+// ボタンを押した時の仮のセーブ処理（※本当の連動処理はコード合体時に実装します）
+function saveGameDna() {
+    // 仮の暗号データ
+    let dummyDna = "ZAURAS-DNA-" + btoa(encodeURIComponent("SaurerNo10_Lv1_Eat0"));
+    
+    document.getElementById('generatedDnaCode').value = dummyDna;
+    document.getElementById('dnaModalOverlay').style.display = 'flex';
+}
+
+function copyDnaAndClose() {
+    const codeText = document.getElementById('generatedDnaCode');
+    navigator.clipboard.writeText(codeText.value);
+    document.getElementById('dnaModalOverlay').style.display = 'none';
+    alert("DNAコードを記憶しました！別の端末の入力欄に貼り付けて使用してください。");
+}
+
+function loadGameDna() {
+    let input = document.getElementById('dnaCodeInput').value.trim();
+    if(!input) return alert("DNAコードが入力されていません！");
+    alert("DNAデータを解析中... 冒険を再開します！");
+}
+</script>
 
 	</body></html>
