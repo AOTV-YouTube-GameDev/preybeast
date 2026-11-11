@@ -4270,7 +4270,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 <!-- 📐 UI制御のJavaScript -->
 <script>
-// 📐 【弱肉捕食♾️ザウラス™️ 専用】メモリ内部変数強制吸い出しセーブシステム
+// 📐 【弱肉捕食♾️ザウラス™️ 専用】全変数ディープスキャン・完全クロスセーブシステム
 function toggleDnaMenu() {
     const content = document.getElementById('dnaMenuContent');
     const arrow = document.getElementById('dnaMenuArrow');
@@ -4288,67 +4288,55 @@ function toggleDnaMenu() {
     }
 }
 
-// 💾 【セーブ】プログラムが実行中のメモリから、ザウラーの育成データを強制抽出
+// 💾 【セーブ】AIが作った全ての変数・配列・オブジェクトをディープスキャンしてDNA化
 function saveGameDna() {
-    let extractedData = {};
-    
+    let allSnapshot = {};
+
     try {
-        // 💡 1. AIがゲーム内のデータを隠している「可能性のある箱の名前」を総当たりで全部のぞく！
-        const targetBoxes = [
-            'saurerState', 'gameState', 'game', 'saurer', 'state', 'player', 
-            'saveData', 'currentSaurer', 'saurerList', 'discoveredSaurers',
-            'unlockedSaurers', 'catalog', 'status'
-        ];
-        
-        for (let boxName of targetBoxes) {
-            if (window[boxName] !== undefined && window[boxName] !== null) {
-                extractedData[boxName] = window[boxName];
-            }
-        }
+        // 💡 window内の全オブジェクトをエラーを起こさずに安全に複製する特殊ロジック
+        for (let key in window) {
+            if (window.hasOwnProperty(key)) {
+                // セーブシステム自体や、HTMLの画面パーツなどのシステム系は完全に除外
+                if (key === 'window' || key === 'document' || key === 'location' || 
+                    key === 'localStorage' || key === 'dnaMenuContainer' || 
+                    key === 'chrome' || key === 'length' || typeof window[key] === 'function') {
+                    continue;
+                }
 
-        // 💡 2. もし上の箱にまとまっていなくても、バラバラのステータス変数（数値・文字）をまとめて救出
-        const targetKeys = [
-            'level', 'lv', 'eat', 'eatCount', 'hp', 'maxHp', 'atk', 'defense', 
-            'speed', 'weight', 'wt', 'wins', 'victory', 'stage', 'currentStage',
-            'unlockedCount', 'discoveredCount', 'saurerName', 'name'
-        ];
-        
-        for (let key of targetKeys) {
-            if (window[key] !== undefined && window[key] !== null && typeof window[key] !== 'function') {
-                extractedData[key] = window[key];
-            }
-        }
-
-        // 💡 3. バックアップとしてLocalStorageの中身も念のためマージしておく
-        for (let i = 0; i < localStorage.length; i++) {
-            let key = localStorage.key(i);
-            if (key !== 'dnaMenuContainer' && key !== 'gameStateBackup') {
-                try {
-                    extractedData[key] = JSON.parse(localStorage.getItem(key));
-                } catch(e) {
-                    extractedData[key] = localStorage.getItem(key);
+                let item = window[key];
+                if (item !== null && item !== undefined) {
+                    try {
+                        // 💡 文字列化して保存可能か（エラーにならないか）を1つずつテスト選別
+                        let testJson = JSON.stringify(item);
+                        // 空のオブジェクトや、ボタンのデータ等の不要なものは弾く
+                        if (testJson !== '{}' && testJson !== '[]' && !key.includes('HTML')) {
+                            allSnapshot[key] = item;
+                        }
+                    } catch (e) {
+                        // 弾かれた場合も、数値や文字などの純粋な変数ならバラして救出
+                        if (typeof item === 'number' || typeof item === 'string' || typeof item === 'boolean') {
+                            allSnapshot[key] = item;
+                        }
+                    }
                 }
             }
         }
 
-        // 【最終防衛ライン】何も見つからなかった場合は、エラーにせず最低限window全体から数値だけを吸う
-        if (Object.keys(extractedData).length <= 2) {
-            for (let key in window) {
-                if (window.hasOwnProperty(key) && typeof window[key] === 'number' && key !== 'length') {
-                    extractedData[key] = window[key];
-                }
-            }
+        // データの空っぽチェック
+        if (Object.keys(allSnapshot).length === 0) {
+            alert("育成データが検出されませんでした。ゲーム画面を一度タップしてからお試しください。");
+            return;
         }
 
-        // 吸い出した全データを暗号化
-        let jsonString = JSON.stringify(extractedData);
+        // データを長い暗号文字列（DNAコード）に変換
+        let jsonString = JSON.stringify(allSnapshot);
         let saveCode = btoa(unescape(encodeURIComponent(jsonString)));
 
         // 🧬 ポップアップ画面を起動してコードを表示
         document.getElementById('generatedDnaCode').value = saveCode;
         document.getElementById('dnaModalOverlay').style.display = 'flex';
     } catch (error) {
-        alert("DNAコードの作成に失敗しました。ゲームを少し進めてから再度お試しください。");
+        alert("DNAコードの作成に失敗しました。");
         console.error(error);
     }
 }
@@ -4361,7 +4349,7 @@ function copyDnaAndClose() {
     alert("DNAコードをクリップボードに記憶しました！\n別の端末の入力欄に貼り付けて「再開」を押してください。");
 }
 
-// 📖 【ロード】DNAコードを解析し、プログラムの変数へ完璧に流し込む
+// 📖 【ロード】DNAコードを100%元の変数に流し込み、画面をリフレッシュする
 function loadGameDna() {
     let inputCode = document.getElementById('dnaCodeInput').value.trim();
     if (!inputCode) return alert("DNAコードを入力してください！");
@@ -4371,38 +4359,31 @@ function loadGameDna() {
         let jsonString = decodeURIComponent(escape(atob(inputCode)));
         let loadedData = JSON.parse(jsonString);
 
-        // 解読した全てのデータをメモリ（window領域）と保存領域（LocalStorage）の双方へ流し込む
+        // 💡 1. 記憶されていたすべてのデータをゲームの実行メモリに丸ごと完全流し込み
         for (let key in loadedData) {
-            let val = loadedData[key];
-            
-            // オブジェクト型（箱）のデータは深層までマージ上書き
-            if (typeof val === 'object' && val !== null && window[key] && typeof window[key] === 'object') {
-                for (let subKey in val) {
-                    window[key][subKey] = val[subKey];
+            if (loadedData.hasOwnProperty(key)) {
+                let val = loadedData[key];
+                
+                // オブジェクト型（箱）の中身も深く上書き
+                if (typeof val === 'object' && val !== null && window[key] && typeof window[key] === 'object') {
+                    for (let subKey in val) {
+                        window[key][subKey] = val[subKey];
+                    }
+                } else {
+                    window[key] = val;
                 }
-            } else {
-                window[key] = val;
-            }
-            
-            // ローカルストレージにも保存して永続化させる
-            if (typeof val === 'object') {
-                localStorage.setItem(key, JSON.stringify(val));
-            } else {
-                localStorage.setItem(key, val);
             }
         }
 
-        // 💡 画面とザウラーカタログの強制アップデートを総当たりで実行
-        if (typeof updateDisplay === "function") updateDisplay();
-        if (typeof render === "function") render();
-        if (typeof draw === "function") draw();
-        if (typeof updateUI === "function") updateUI();
-        if (typeof update === "function") update();
-        if (typeof showDisplay === "function") showDisplay();
-        if (typeof init === "function") init();
-        if (typeof loadGame === "function") loadGame();
+        // 💡 2. AIが作った画面更新処理を片っ端から総当たりで強制起動
+        const refreshFunctions = ['updateDisplay', 'render', 'draw', 'updateUI', 'update', 'showDisplay', 'init', 'loadGame'];
+        refreshFunctions.forEach(funcName => {
+            if (typeof window[funcName] === "function") {
+                try { window[funcName](); } catch(err) {}
+            }
+        });
 
-        alert("DNAデータのクローン復元に成功しました！\nザウラーのステータス、カタログ状況を反映して再開します。");
+        alert("DNAデータのクローン復元に成功しました！\n現在のザウラー、ステータス、カタログが完全に復元されました。");
         
     } catch (e) {
         alert("DNAコードが間違っているか、データが壊れています！");
