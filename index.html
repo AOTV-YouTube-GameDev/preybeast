@@ -4293,7 +4293,6 @@ function saveGameDna() {
     let extractedData = {};
 
     // 💡 AIが作ったゲーム内の主要データが詰まっているオブジェクト(箱)の名前の候補リスト
-    // （コード内に存在するデータボックスを自動で見つけ出します）
     const targetBoxes = ['gameState', 'game', 'saurer', 'state', 'player', 'saveData'];
     let mainBox = null;
 
@@ -4309,7 +4308,6 @@ function saveGameDna() {
     if (mainBox) {
         for (let key in mainBox) {
             if (mainBox.hasOwnProperty(key)) {
-                // 不要なHTML要素や関数などを完全に除外するための安全フィルター
                 if (typeof mainBox[key] !== 'function' && !mainBox[key]?.nodeType) {
                     extractedData[key] = mainBox[key];
                 }
@@ -4318,7 +4316,6 @@ function saveGameDna() {
     } 
     // 💡 2. もしデータがバラバラの変数で管理されている場合のバックアップ処理
     else {
-        // ゲーム全体のグローバル変数から、HTML表示用などの不要データを排除してピュアな値だけを集める
         for (let key in window) {
             if (window.hasOwnProperty(key)) {
                 let value = window[key];
@@ -4336,11 +4333,9 @@ function saveGameDna() {
     }
 
     try {
-        // 抽出したピュアな育成データ、二つ名、カタログ状況のみをJSON文字列にして暗号化（B64化）
         let jsonString = JSON.stringify(extractedData);
         let saveCode = btoa(unescape(encodeURIComponent(jsonString)));
 
-        // 🧬 あのDNA模様のポップアップ画面を起動してコードを表示
         document.getElementById('generatedDnaCode').value = saveCode;
         document.getElementById('dnaModalOverlay').style.display = 'flex';
     } catch (error) {
@@ -4376,29 +4371,38 @@ function loadGameDna() {
                     window[boxName][key] = loadedData[key];
                 }
             }
+            // 🔄 裏技：次回読み込み用にブラウザのローカルストレージにも自動同期
+            try { localStorage.setItem(boxName, JSON.stringify(window[boxName])); } catch(e){}
         } 
         // 💡 2. バラバラの変数で管理されていた場合は、グローバル領域へそのまま復元
         else {
             for (let key in loadedData) {
                 window[key] = loadedData[key];
+                // バラバラの主要な値を個別にローカルストレージへも保存
+                try { if(typeof loadedData[key] !== 'object') localStorage.setItem(key, loadedData[key]); } catch(e){}
             }
+            try { localStorage.setItem('gameState', JSON.stringify(loadedData)); } catch(e){}
         }
 
-        alert("DNAデータのクローン復元に成功しました！\nザウラーのステータス、二つ名、カタログ状況を反映して再開します。");
-
-        // 💡 ロード後に自動でゲーム画面（UIや図鑑の生存・絶滅ランプ）を最新値に描き直させる処理
+        // 💡 3. 【画面の強制アップデート】AIが作った主要な再描画処理を総当たりで強制トリガー！
+        // これにより、レベル、EAT、30種類のカタログ進捗がパッと最新に切り替わります
         if (typeof updateDisplay === "function") updateDisplay();
         if (typeof render === "function") render();
         if (typeof draw === "function") draw();
         if (typeof updateUI === "function") updateUI();
         if (typeof update === "function") update();
+        if (typeof showDisplay === "function") showDisplay();
+        if (typeof init === "function") init();
+        if (typeof loadGame === "function") loadGame();
+
+        alert("DNAデータのクローン復元に成功しました！\nザウラーのステータス、二つ名、カタログ状況を反映して再開します。\n\n※万が一画面の数値が変わらない場合は、そのまま一度ページを「再読み込み（リロード）」してください。確実に続きから始まります！");
         
     } catch (e) {
         alert("DNAコードが間違っているか、データが壊れています！");
         console.error(e);
     }
 }
-
+	
 </script>
 
 	</body></html>
