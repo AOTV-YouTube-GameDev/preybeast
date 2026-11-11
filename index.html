@@ -4270,7 +4270,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 <!-- 📐 UI制御のJavaScript -->
 <script>
-// 📐 【弱肉捕食♾️ザウラス™️ 専用】指定ステータス・二つ名・カタログ完全抽出セーブシステム
+// 📐 【弱肉捕食♾️ザウラス™️ 専用】メモリ内部変数強制吸い出しセーブシステム
 function toggleDnaMenu() {
     const content = document.getElementById('dnaMenuContent');
     const arrow = document.getElementById('dnaMenuArrow');
@@ -4288,42 +4288,59 @@ function toggleDnaMenu() {
     }
 }
 
-// 💾 【セーブ】PreyBeast!のローカルストレージから本物のデータを直接抜き出す
+// 💾 【セーブ】プログラムが実行中のメモリから、ザウラーの育成データを強制抽出
 function saveGameDna() {
     let extractedData = {};
     
     try {
-        // 💡 AIのコードがブラウザ（LocalStorage）に自動保存している全ての鍵を強制捜査
+        // 💡 1. AIがゲーム内のデータを隠している「可能性のある箱の名前」を総当たりで全部のぞく！
+        const targetBoxes = [
+            'saurerState', 'gameState', 'game', 'saurer', 'state', 'player', 
+            'saveData', 'currentSaurer', 'saurerList', 'discoveredSaurers',
+            'unlockedSaurers', 'catalog', 'status'
+        ];
+        
+        for (let boxName of targetBoxes) {
+            if (window[boxName] !== undefined && window[boxName] !== null) {
+                extractedData[boxName] = window[boxName];
+            }
+        }
+
+        // 💡 2. もし上の箱にまとまっていなくても、バラバラのステータス変数（数値・文字）をまとめて救出
+        const targetKeys = [
+            'level', 'lv', 'eat', 'eatCount', 'hp', 'maxHp', 'atk', 'defense', 
+            'speed', 'weight', 'wt', 'wins', 'victory', 'stage', 'currentStage',
+            'unlockedCount', 'discoveredCount', 'saurerName', 'name'
+        ];
+        
+        for (let key of targetKeys) {
+            if (window[key] !== undefined && window[key] !== null && typeof window[key] !== 'function') {
+                extractedData[key] = window[key];
+            }
+        }
+
+        // 💡 3. バックアップとしてLocalStorageの中身も念のためマージしておく
         for (let i = 0; i < localStorage.length; i++) {
             let key = localStorage.key(i);
-            // 今回追加したセーブ窓以外の、ゲーム本来の育成データをすべて抽出
             if (key !== 'dnaMenuContainer' && key !== 'gameStateBackup') {
                 try {
-                    // JSONオブジェクトならそのまま、文字なら文字として記憶
                     extractedData[key] = JSON.parse(localStorage.getItem(key));
                 } catch(e) {
                     extractedData[key] = localStorage.getItem(key);
                 }
             }
         }
-        
-        // 💡 バックアップ：もしストレージが空でも、画面上の変数から総当たりで集める
-        const targetBoxes = ['gameState', 'game', 'saurer', 'state', 'player', 'saveData'];
-        for (let boxName of targetBoxes) {
-            if (window[boxName] && typeof window[boxName] === 'object') {
-                extractedData[boxName] = window[boxName];
+
+        // 【最終防衛ライン】何も見つからなかった場合は、エラーにせず最低限window全体から数値だけを吸う
+        if (Object.keys(extractedData).length <= 2) {
+            for (let key in window) {
+                if (window.hasOwnProperty(key) && typeof window[key] === 'number' && key !== 'length') {
+                    extractedData[key] = window[key];
+                }
             }
         }
-        if (window.currentSaurer) extractedData.currentSaurer = window.currentSaurer;
-        if (window.saurerList) extractedData.saurerList = window.saurerList;
 
-        // データの空っぽチェック
-        if (Object.keys(extractedData).length <= 0) {
-            alert("セーブするデータが見つかりません。ゲームを少し進めてから再度お試しください。");
-            return;
-        }
-
-        // 抽出した全データを暗号化
+        // 吸い出した全データを暗号化
         let jsonString = JSON.stringify(extractedData);
         let saveCode = btoa(unescape(encodeURIComponent(jsonString)));
 
@@ -4331,7 +4348,7 @@ function saveGameDna() {
         document.getElementById('generatedDnaCode').value = saveCode;
         document.getElementById('dnaModalOverlay').style.display = 'flex';
     } catch (error) {
-        alert("DNAコードの作成に失敗しました。お手数ですが一度ゲームコードをご確認ください。");
+        alert("DNAコードの作成に失敗しました。ゲームを少し進めてから再度お試しください。");
         console.error(error);
     }
 }
@@ -4344,7 +4361,7 @@ function copyDnaAndClose() {
     alert("DNAコードをクリップボードに記憶しました！\n別の端末の入力欄に貼り付けて「再開」を押してください。");
 }
 
-// 📖 【ロード】DNAコードを解析し、AIが作った本来のセーブ領域へ完璧に流し込む
+// 📖 【ロード】DNAコードを解析し、プログラムの変数へ完璧に流し込む
 function loadGameDna() {
     let inputCode = document.getElementById('dnaCodeInput').value.trim();
     if (!inputCode) return alert("DNAコードを入力してください！");
@@ -4354,20 +4371,28 @@ function loadGameDna() {
         let jsonString = decodeURIComponent(escape(atob(inputCode)));
         let loadedData = JSON.parse(jsonString);
 
-        // 💡 1. 解読したデータをAIが読み込むブラウザ保存領域（LocalStorage）へ直接流し込む！
+        // 解読した全てのデータをメモリ（window領域）と保存領域（LocalStorage）の双方へ流し込む
         for (let key in loadedData) {
             let val = loadedData[key];
+            
+            // オブジェクト型（箱）のデータは深層までマージ上書き
+            if (typeof val === 'object' && val !== null && window[key] && typeof window[key] === 'object') {
+                for (let subKey in val) {
+                    window[key][subKey] = val[subKey];
+                }
+            } else {
+                window[key] = val;
+            }
+            
+            // ローカルストレージにも保存して永続化させる
             if (typeof val === 'object') {
                 localStorage.setItem(key, JSON.stringify(val));
             } else {
                 localStorage.setItem(key, val);
             }
-            
-            // 同時に現在の実行画面の変数（window領域）にも上書き
-            window[key] = val;
         }
 
-        // 💡 2. 画面とザウラーカタログの強制アップデートを総当たりで実行
+        // 💡 画面とザウラーカタログの強制アップデートを総当たりで実行
         if (typeof updateDisplay === "function") updateDisplay();
         if (typeof render === "function") render();
         if (typeof draw === "function") draw();
@@ -4377,17 +4402,14 @@ function loadGameDna() {
         if (typeof init === "function") init();
         if (typeof loadGame === "function") loadGame();
 
-        alert("DNAデータのクローン復元に成功しました！\nザウラーのステータス、二つ名、カタログ状況を反映して再開します。\n\n※反映されない場合は、そのまま一度ページを「再読み込み（リロード）」してください。確実に続きから始まります！");
-        
-        // 確実な反映のため、ページを自動で1回リロードさせる（これですべて解決します）
-        setTimeout(function(){ location.reload(); }, 500);
+        alert("DNAデータのクローン復元に成功しました！\nザウラーのステータス、カタログ状況を反映して再開します。");
         
     } catch (e) {
         alert("DNAコードが間違っているか、データが壊れています！");
         console.error(e);
     }
 }
-	
+
 </script>
 
 	</body></html>
