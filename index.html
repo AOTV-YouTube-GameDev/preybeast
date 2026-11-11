@@ -4288,54 +4288,46 @@ function toggleDnaMenu() {
     }
 }
 
-// 💾 【セーブ】指定された重要なゲームデータ値だけをきれいに抽出してDNAコード化する
+// 💾 【セーブ】PreyBeast!のローカルストレージから本物のデータを直接抜き出す
 function saveGameDna() {
     let extractedData = {};
-
-    // 💡 AIが作ったゲーム内の主要データが詰まっているオブジェクト(箱)の名前の候補リスト
-    const targetBoxes = ['gameState', 'game', 'saurer', 'state', 'player', 'saveData'];
-    let mainBox = null;
-
-    for (let boxName of targetBoxes) {
-        if (window[boxName] && typeof window[boxName] === 'object') {
-            mainBox = window[boxName];
-            extractedData._boxName = boxName; // ロード用に箱の名前を記憶
-            break;
-        }
-    }
-
-    // 💡 1. ひとまとめの箱が見つかった場合、その中から必要なデータだけをきれいに抽出
-    if (mainBox) {
-        for (let key in mainBox) {
-            if (mainBox.hasOwnProperty(key)) {
-                if (typeof mainBox[key] !== 'function' && !mainBox[key]?.nodeType) {
-                    extractedData[key] = mainBox[key];
-                }
-            }
-        }
-    } 
-    // 💡 2. もしデータがバラバラの変数で管理されている場合のバックアップ処理
-    else {
-        for (let key in window) {
-            if (window.hasOwnProperty(key)) {
-                let value = window[key];
-                let type = typeof value;
-                if ((type === 'number' || type === 'string' || type === 'boolean' || type === 'object') && 
-                    value !== null && !value.nodeType && 
-                    key !== 'window' && key !== 'document' && key !== 'location' && key !== 'navigation') {
-                    try {
-                        JSON.stringify(value);
-                        extractedData[key] = value;
-                    } catch(e) {}
-                }
-            }
-        }
-    }
-
+    
     try {
+        // 💡 AIのコードがブラウザ（LocalStorage）に自動保存している全ての鍵を強制捜査
+        for (let i = 0; i < localStorage.length; i++) {
+            let key = localStorage.key(i);
+            // 今回追加したセーブ窓以外の、ゲーム本来の育成データをすべて抽出
+            if (key !== 'dnaMenuContainer' && key !== 'gameStateBackup') {
+                try {
+                    // JSONオブジェクトならそのまま、文字なら文字として記憶
+                    extractedData[key] = JSON.parse(localStorage.getItem(key));
+                } catch(e) {
+                    extractedData[key] = localStorage.getItem(key);
+                }
+            }
+        }
+        
+        // 💡 バックアップ：もしストレージが空でも、画面上の変数から総当たりで集める
+        const targetBoxes = ['gameState', 'game', 'saurer', 'state', 'player', 'saveData'];
+        for (let boxName of targetBoxes) {
+            if (window[boxName] && typeof window[boxName] === 'object') {
+                extractedData[boxName] = window[boxName];
+            }
+        }
+        if (window.currentSaurer) extractedData.currentSaurer = window.currentSaurer;
+        if (window.saurerList) extractedData.saurerList = window.saurerList;
+
+        // データの空っぽチェック
+        if (Object.keys(extractedData).length <= 0) {
+            alert("セーブするデータが見つかりません。ゲームを少し進めてから再度お試しください。");
+            return;
+        }
+
+        // 抽出した全データを暗号化
         let jsonString = JSON.stringify(extractedData);
         let saveCode = btoa(unescape(encodeURIComponent(jsonString)));
 
+        // 🧬 ポップアップ画面を起動してコードを表示
         document.getElementById('generatedDnaCode').value = saveCode;
         document.getElementById('dnaModalOverlay').style.display = 'flex';
     } catch (error) {
@@ -4352,40 +4344,30 @@ function copyDnaAndClose() {
     alert("DNAコードをクリップボードに記憶しました！\n別の端末の入力欄に貼り付けて「再開」を押してください。");
 }
 
-// 📖 【ロード】DNAコードを解析し、抽出されたデータを元の場所へ完璧に復元する
+// 📖 【ロード】DNAコードを解析し、AIが作った本来のセーブ領域へ完璧に流し込む
 function loadGameDna() {
     let inputCode = document.getElementById('dnaCodeInput').value.trim();
     if (!inputCode) return alert("DNAコードを入力してください！");
 
     try {
-        // コードを元のJSONデータにデコード
+        // コードをデコード
         let jsonString = decodeURIComponent(escape(atob(inputCode)));
         let loadedData = JSON.parse(jsonString);
 
-        let boxName = loadedData._boxName;
-        
-        // 💡 1. 元々ひとまとめの箱（オブジェクト）で管理されていた場合は、その箱の中身を復元
-        if (boxName && window[boxName] && typeof window[boxName] === 'object') {
-            for (let key in loadedData) {
-                if (key !== '_boxName') {
-                    window[boxName][key] = loadedData[key];
-                }
+        // 💡 1. 解読したデータをAIが読み込むブラウザ保存領域（LocalStorage）へ直接流し込む！
+        for (let key in loadedData) {
+            let val = loadedData[key];
+            if (typeof val === 'object') {
+                localStorage.setItem(key, JSON.stringify(val));
+            } else {
+                localStorage.setItem(key, val);
             }
-            // 🔄 裏技：次回読み込み用にブラウザのローカルストレージにも自動同期
-            try { localStorage.setItem(boxName, JSON.stringify(window[boxName])); } catch(e){}
-        } 
-        // 💡 2. バラバラの変数で管理されていた場合は、グローバル領域へそのまま復元
-        else {
-            for (let key in loadedData) {
-                window[key] = loadedData[key];
-                // バラバラの主要な値を個別にローカルストレージへも保存
-                try { if(typeof loadedData[key] !== 'object') localStorage.setItem(key, loadedData[key]); } catch(e){}
-            }
-            try { localStorage.setItem('gameState', JSON.stringify(loadedData)); } catch(e){}
+            
+            // 同時に現在の実行画面の変数（window領域）にも上書き
+            window[key] = val;
         }
 
-        // 💡 3. 【画面の強制アップデート】AIが作った主要な再描画処理を総当たりで強制トリガー！
-        // これにより、レベル、EAT、30種類のカタログ進捗がパッと最新に切り替わります
+        // 💡 2. 画面とザウラーカタログの強制アップデートを総当たりで実行
         if (typeof updateDisplay === "function") updateDisplay();
         if (typeof render === "function") render();
         if (typeof draw === "function") draw();
@@ -4395,7 +4377,10 @@ function loadGameDna() {
         if (typeof init === "function") init();
         if (typeof loadGame === "function") loadGame();
 
-        alert("DNAデータのクローン復元に成功しました！\nザウラーのステータス、二つ名、カタログ状況を反映して再開します。\n\n※万が一画面の数値が変わらない場合は、そのまま一度ページを「再読み込み（リロード）」してください。確実に続きから始まります！");
+        alert("DNAデータのクローン復元に成功しました！\nザウラーのステータス、二つ名、カタログ状況を反映して再開します。\n\n※反映されない場合は、そのまま一度ページを「再読み込み（リロード）」してください。確実に続きから始まります！");
+        
+        // 確実な反映のため、ページを自動で1回リロードさせる（これですべて解決します）
+        setTimeout(function(){ location.reload(); }, 500);
         
     } catch (e) {
         alert("DNAコードが間違っているか、データが壊れています！");
